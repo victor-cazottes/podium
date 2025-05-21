@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, FlatList } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, FlatList, Pressable } from 'react-native';
 import { Text, View } from '@/components/Themed';
 
 const participants: [string, number, number][] = [
@@ -9,23 +9,61 @@ const participants: [string, number, number][] = [
   ['Aymeric', 0, 4500],
 ];
 
-
-// Tri décroissant sur la somme globale (index 2)
-const sortedParticipants = participants.sort((a, b) => b[2] - a[2]);
+type SortKey = 'nickname' | 'dayPoints' | 'totalPoints';
+type SortOrder = 'asc' | 'desc';
 
 export default function TabRankingScreen() {
+  const [sortKey, setSortKey] = useState<SortKey>('totalPoints');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+
+  const sortedParticipants = useMemo(() => {
+    const sorted = [...participants].sort((a, b) => {
+      const [nameA, dayA, totalA] = a;
+      const [nameB, dayB, totalB] = b;
+
+      let comparison = 0;
+      if (sortKey === 'nickname') {
+        comparison = nameA.localeCompare(nameB);
+      } else if (sortKey === 'dayPoints') {
+        comparison = dayA - dayB;
+      } else if (sortKey === 'totalPoints') {
+        comparison = totalA - totalB;
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [sortKey, sortOrder]);
+
+  const toggleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      // Inverser l'ordre si on clique sur la même colonne
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Tab Ranking</Text>
 
-      {/* En-tête du tableau */}
+      {/* En-tête cliquable */}
       <View style={[styles.row, styles.header]}>
-        <Text style={styles.cell}>Nickname</Text>
-        <Text style={styles.cell}>Day points</Text>
-        <Text style={styles.cell}>Total points</Text>
+        <Pressable style={styles.cell} onPress={() => toggleSort('nickname')}>
+          <Text style={styles.headerText}>Nickname {sortKey === 'nickname' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</Text>
+        </Pressable>
+        <Pressable style={styles.cell} onPress={() => toggleSort('dayPoints')}>
+          <Text style={styles.headerText}>Day points {sortKey === 'dayPoints' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</Text>
+        </Pressable>
+        <Pressable style={styles.cell} onPress={() => toggleSort('totalPoints')}>
+          <Text style={styles.headerText}>Total points {sortKey === 'totalPoints' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}</Text>
+        </Pressable>
       </View>
 
-      {/* Liste des participants */}
+      {/* Liste triée */}
       <FlatList
         data={sortedParticipants}
         keyExtractor={(item) => item[0]}
@@ -40,6 +78,7 @@ export default function TabRankingScreen() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -69,5 +108,9 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 16,
+  },
+  headerText: {
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
